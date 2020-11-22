@@ -15,7 +15,7 @@ def upsample_block(x, filters, down_conn):
     upsample = layers.UpSampling2D(size=(2, 2))(x)
     up_conv1 = layers.Conv2D(filters=filters, kernel_size=(2, 2), padding='same')(upsample)
     concat = layers.concatenate([down_conn, up_conv1], axis=-1)
-    up_conv2 = conv_block(concat, filters=128)
+    up_conv2 = conv_block(concat, filters=filters)
     return up_conv2
 
 
@@ -39,4 +39,10 @@ def unet_model():
 
     output = layers.Conv2D(1, 1, activation = 'sigmoid')(up4)
     model = keras.Model(inputs=input_layer, outputs=output)
+    
+    model.compile(
+        optimizer=keras.optimizers.Adam(1e-3),
+        loss=keras.losses.BinaryCrossentropy(from_logits=True),
+        metrics=['accuracy'])
+    
     return model
