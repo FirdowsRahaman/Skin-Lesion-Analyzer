@@ -1,93 +1,61 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
-import pathlib
-import numpy as np
+import glob
+import pandas as pd
+
 import tensorflow as tf
+from tensorflow.keras.utils import to_categorical
 
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 class DatasetBuilder():
-    def __init__(self, params):
-        self.params = params
+    def __init__(self, base_dir, csv_file):
+        self.base_dir = base_dir
+        self.csv_file = csv_file
         
+    def transform_df(self, base_dir, csv_file):
+        df = pd.read_csv(csv_file)
+        image_path_dict = {os.path.splitext(os.path.basename(x))[0]: x 
+                       for x in glob.glob(os.path.join(base_dir, '*', '*.jpg'))}
+        label_dict = {'akiec': 0, 'bcc': 1, 'bkl': 2, 'df': 3,
+                      'mel': 4, 'nv': 5, 'vasc': 6}
+        df['image_path'] = df['image_id'].map(image_path_dict.get)
+        df['label_id'] = df['dx'].map(label_dict.get)
+        return df
     
-    @property
-    def image_size(self):
-        return list(self.params['image_shape'][:2])
+    def split_df(self):
+        dataframe = self.transform_df(self.base_dir, self.csv_file)
+        train_df, val_df = train_test_split(dataframe, test_size=0.15)
+        train_df, test_df = train_test_split(train_df, test_size=0.10)
+        return train_df, val_df, test_df
     
+    def get_labels(self, dataframe):
+        label_list = dataframe.label_id.values
+        labels = to_categorical(label_list, num_classes=7)
+        return labels
     
-    @property
-    def class_names(self):
-        train_data_path = pathlib.Path(self.params['train_data_path'])
-        return np.array([item.name for item in train_data_path.glob('*')])
-    
-    
-    @property
-    def batch_size(self):
-        return int(self.params['batch_size'])
-    
-    
-    @property
-    def train_data_dir(self):
-        return pathlib.Path(self.params['train_data_path'])
-    
-    
-    @property
-    def val_data_dir(self):
-        return pathlib.Path(self.params['val_data_path'])
-    
-    
-    @property
-    def num_classes(self):
-        return int(self.params['num_classes'])
-    
-    
-    def decode_image(self, image_path):
-        image_bytes = tf.io.read_file(image_path)
-        image_array = tf.image.decode_jpeg(image_bytes, channels=3)
-        image_array = tf.image.convert_image_dtype(image_array, tf.float32)
-        image_array = tf.image.resize(image_array, self.image_size)
-        return image_array
-    
-    
-    def get_label(self, file_path):
-        parts = tf.strings.split(file_path, os.path.sep)
-        return parts[-2] == self.class_names
-    
-    
-    def preprocess_input(self, file_path):
-        image = self.decode_image(file_path)
-        label = self.get_label(file_path)
+    def decode_image(self, filename, label=None, image_size=(224, 224)):
+        bits = tf.io.read_file(filename)
+        image = tf.image.decode_jpeg(bits, channels=3)
+        image = tf.image.convert_image_dtype(image, tf.float32)
+        image = tf.image.resize(image, image_size)
         return image, label
     
-    
-    def input_fn(self, data_dir, mode=None):
-        list_ds = tf.data.Dataset.list_files(str(data_dir/'*'/'*'))
-        labeled_ds = list_ds.map(self.preprocess_input, num_parallel_calls=AUTOTUNE)
-        dataset = labeled_ds.cache().repeat()
-        if mode == 'train':
-            dataset = dataset.shuffle(buffer_size = 10 * self.batch_size)
-        dataset = dataset.batch(self.batch_size)
-        return dataset
-    
-    
-    @property
-    def train_steps(self):
-        image_count = len(list(self.train_data_dir.glob('*/*.jpg')))
-        return np.ceil(image_count/self.batch_size)
-    
-    
-    @property
-    def val_steps(self):
-        image_count = len(list(self.val_data_dir.glob('*/*.jpg')))
-        return np.ceil(image_count/self.batch_size)
-    
-    
+    def input_fn(self, dataframe, batch_size=32, mode=None):
+        image_list = dataframe.image_path.values
+        labels = self.get_labels(dataframe)
+        ds = (tf.data.Dataset     
+                .from_tensor_slices((image_list, labels))
+                .map(self.decode_image, num_parallel_calls=AUTOTUNE)
+                .cache()
+                .repeat()
+                .shuffle(buffer_size = 10 * batch_size)
+                .batch(batch_size)
+                .prefetch(AUTOTUNE))
+        return ds
+
     def create_dataset(self):
-        train_ds = self.input_fn(self.train_data_dir, 'train')
-        val_ds = self.input_fn(self.val_data_dir)
+        train_df, val_df, test_df = self.split_df()
+        train_ds = self.input_fn(train_df)
+        val_ds = self.input_fn(val_df)
         return train_ds, val_ds
