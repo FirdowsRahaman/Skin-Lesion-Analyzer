@@ -5,8 +5,8 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.utils import to_categorical
 
-
 AUTOTUNE = tf.data.experimental.AUTOTUNE
+
 
 class DatasetBuilder():
     def __init__(self, base_dir, csv_file):
