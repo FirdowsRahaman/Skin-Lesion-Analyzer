@@ -1,9 +1,28 @@
-# Skin-Lesion-Analyzer
+# 🔬 Skin Lesion Analyzer & U-Net Segmentation
 
-Skin cancer, the most common human malignancy, is primarily diagnosed visually, beginning with an initial clinical screening and followed 
-potentially by dermoscopic analysis, a biopsy and histopathological examination. Automated classification of skin lesions using images is 
-a challenging task owing to the fine-grained variability in the appearance of skin lesions. Deep convolutional neural networks (CNNs) show 
-potential for general and highly variable tasks across many fine-grained object categories. Dermatoscopic images are also a suitable source 
-to train artificial neural networks to diagnose pigmented skin lesions automatically. Training of neural-network based diagnostic algorithms 
-requires a large number of annotated images but the number of high quality dermatoscopic images with reliable diagnoses is limited or restricted 
-to only a few classes of diseases.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Architecture: U-Net](https://img.shields.io/badge/Architecture-U--Net-orange.svg)](#)
+[![Dermatology AI](https://img.shields.io/badge/Domain-Dermatology%20AI-teal.svg)](#)
+
+Automated skin lesion segmentation and classification for clinical dermatology using U-Net and Deep Learning.
+
+## 📌 Overview
+Dermatological AI application designed to segment lesion boundaries from dermoscopic images and assess malignant vs. benign lesion characteristics. Built with modular Python modules and U-Net encoder-decoder architectures with skip connections for high-resolution edge detection.
+
+## 🛠️ Architecture & Modules
+- `unet.py`: Core U-Net architecture implementation with contracting encoder, bottleneck, and expanding decoder paths with skip connections.
+- `model.py`: Classifier and segmentation head configurations.
+- `data_loader.py`: Dermoscopic image batching, augmentation, and ground-truth mask alignment.
+- `main.py`: Modular training loop CLI supporting hyperparameter sweeps, Dice loss, and IoU metric logging.
+- `Skin Lesion Analyzer Notebook.ipynb`: Interactive analysis, lesion boundary segmentation visualization, and Grad-CAM overlays.
+
+## 🚀 Quickstart
+```bash
+git clone https://github.com/FirdowsRahaman/Skin-Lesion-Analyzer.git
+cd Skin-Lesion-Analyzer
+pip install torch torchvision opencv-python matplotlib scikit-learn
+python main.py
+```
+
+## 📄 License
+This project is licensed under the MIT License.
